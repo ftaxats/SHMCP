@@ -1,139 +1,169 @@
 # SalesHandy MCP Server
 
-A Model Context Protocol (MCP) server that provides a comprehensive interface to the SalesHandy API.
-
-## Prerequisites
-
-- Node.js 18+
-- npm or yarn
-- A SalesHandy API key (Get it from [SalesHandy API Documentation](https://open-api.saleshandy.com/api-doc/))
-
-## Installation
-
-1. Install dependencies:
-```bash
-npm install
-```
-
-2. Configure your SalesHandy API key in the Smithery configuration.
-
-## API Key Configuration
-
-The MCP server requires a valid SalesHandy API key to function. The API key is validated when the server starts up.
-
-### Configuration Format
-
-```typescript
-{
-  apiKey: string;    // Required: Your SalesHandy API key from https://open-api.saleshandy.com/api-doc/
-  baseUrl?: string;  // Optional: API base URL (defaults to https://open-api.saleshandy.com/api/v1)
-}
-```
-
-### API Key Validation
-
-The server will automatically validate your API key on startup by:
-1. Making a test request to the SalesHandy API
-2. Verifying the response status
-3. Providing clear error messages if the key is invalid
-
-If the API key validation fails, you'll receive one of these error messages:
-- "Invalid SalesHandy API key. Please check your API key and try again."
-- "Failed to validate SalesHandy API key. Please try again later."
-
-## Usage
-
-1. Start the development server:
-```bash
-npx @smithery/cli dev
-```
-
-2. The server will validate your API key before becoming available.
+A Model Context Protocol (MCP) server for SalesHandy API integration. This server provides tools for managing campaigns, templates, contacts, and more through the SalesHandy API.
 
 ## Features
 
-This MCP server implements the following SalesHandy API modules:
+The server provides several tools for managing SalesHandy resources:
 
-1. **User Module**
-   - Get user profile
+1. **User Profile Management**
+   - Get current user profile information
 
-2. **Campaigns Module**
-   - List campaigns
-   - Create campaign
+2. **Campaign Management**
+   - List all campaigns with filtering
+   - Create new campaigns
+   - Update campaign status
 
-3. **Templates Module**
-   - List email templates
-   - Create email template
+3. **Template Management**
+   - List all email templates
+   - Create new email templates
 
-4. **Contacts Module**
-   - List contacts
-   - Create contact
+4. **Contact Management**
+   - List all contacts
+   - Create new contacts
+   - Update existing contacts
 
-5. **Analytics Module**
-   - Get consolidated statistics across sequences
-   - Get sequence-specific statistics
-   - Get campaign analytics
+## Installation
 
-6. **Sequences Module**
-   - List sequences
-   - Create sequence
+1. Clone this repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Build the project:
+   ```bash
+   npm run build
+   ```
 
-## Available Tools
+## Configuration
 
-### User Module
-- `getUserProfile`: Get the authenticated user's profile
+The server requires the following configuration:
 
-### Campaigns Module
-- `listCampaigns`: List all campaigns with pagination
-- `createCampaign`: Create a new campaign
+1. **API Key**: Your SalesHandy API key
+   - Get it from your SalesHandy account settings
+   - Required for all API operations
 
-### Templates Module
-- `listTemplates`: List all email templates with pagination
-- `createTemplate`: Create a new email template
+2. **Base URL** (optional):
+   - Default: https://api.saleshandy.com/api/v1
+   - Can be overridden if needed
 
-### Contacts Module
-- `listContacts`: List all contacts with pagination
-- `createContact`: Create a new contact
+## Usage
 
-### Analytics Module
-- `getConsolidatedStats`: Get comprehensive engagement statistics across multiple sequences
-  ```typescript
-  {
-    sequenceIds: string[];    // Array of sequence IDs
-    startDate: string;        // Start date (YYYY-MM-DD)
-    endDate: string;         // End date (YYYY-MM-DD)
-    pageNum?: number;        // Optional: Page number
-    pageLimit?: number;      // Optional: Items per page
-  }
-  ```
-- `getSequenceStats`: Get high-level statistics for a specific sequence
-  ```typescript
-  {
-    sequenceId: string;      // Sequence ID
-  }
-  ```
-- `getCampaignAnalytics`: Get analytics for a specific campaign
+1. Start the server:
+   ```bash
+   npm start
+   ```
 
-### Sequences Module
-- `listSequences`: List all sequences with pagination
-- `createSequence`: Create a new sequence
+2. Connect to the server using an MCP client:
+   ```typescript
+   const client = new McpClient({
+     config: {
+       apiKey: "your-saleshandy-api-key"
+     }
+   });
+   ```
 
-## Error Handling
+3. Use the available tools:
+   ```typescript
+   // Get user profile
+   const profile = await client.tools.getUserProfile();
 
-The server includes built-in error handling that will:
-1. Log errors to the console
-2. Return user-friendly error messages
-3. Maintain proper error types for API responses
-4. Validate API key before any operations
+   // List campaigns
+   const campaigns = await client.tools.listCampaigns({
+     status: "running",
+     page: 1,
+     limit: 10
+   });
+   ```
 
 ## Development
 
-To add new features or modify existing ones:
+1. Install development dependencies:
+   ```bash
+   npm install
+   ```
 
-1. Edit the `src/index.ts` file
-2. Add new tools using the `server.tool()` method
-3. Define input schemas using Zod
-4. Implement the handler function
+2. Start development server with hot reload:
+   ```bash
+   npm run dev
+   ```
+
+## Deployment
+
+The server can be deployed using Smithery:
+
+1. Ensure your `smithery.yaml` is properly configured
+2. Deploy using Smithery's deployment tools
+3. Provide the required configuration (API key) during deployment
+
+## API Reference
+
+### Tools
+
+#### getUserProfile
+Get current user profile information.
+
+#### listCampaigns
+List all campaigns with optional filtering.
+- Parameters:
+  - status: Campaign status (draft, scheduled, running, paused, completed)
+  - page: Page number
+  - limit: Items per page
+  - search: Search term
+
+#### createCampaign
+Create a new campaign.
+- Parameters:
+  - name: Campaign name
+  - subject: Email subject
+  - templateId: Template ID
+  - scheduleTime: Schedule time (ISO format)
+  - contacts: List of contact IDs
+
+#### updateCampaignStatus
+Update campaign status.
+- Parameters:
+  - campaignId: Campaign ID
+  - status: New status
+
+#### listTemplates
+List all email templates.
+- Parameters:
+  - page: Page number
+  - limit: Items per page
+
+#### createTemplate
+Create a new email template.
+- Parameters:
+  - name: Template name
+  - subject: Email subject
+  - body: Email body (HTML)
+
+#### listContacts
+List all contacts.
+- Parameters:
+  - page: Page number
+  - limit: Items per page
+  - search: Search term
+
+#### createContact
+Create a new contact.
+- Parameters:
+  - email: Contact email
+  - firstName: First name
+  - lastName: Last name
+  - company: Company name
+  - tags: Contact tags
+
+#### updateContact
+Update an existing contact.
+- Parameters:
+  - contactId: Contact ID
+  - email: Contact email
+  - firstName: First name
+  - lastName: Last name
+  - company: Company name
+  - tags: Contact tags
 
 ## License
 
