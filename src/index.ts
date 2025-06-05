@@ -28,7 +28,7 @@ const validateApiKey = async (client: ReturnType<typeof createClient>) => {
   try {
     await client.get('/user/profile');
     return true;
-  } catch (error) {
+  } catch (error: any) {
     if (axios.isAxiosError(error)) {
       if (error.response?.status === 401) {
         throw new Error('Invalid SalesHandy API key. Please check your API key and try again.');
@@ -37,6 +37,17 @@ const validateApiKey = async (client: ReturnType<typeof createClient>) => {
     throw new Error('Failed to validate SalesHandy API key. Please try again later.');
   }
 };
+
+// Common schemas
+const paginationSchema = z.object({
+  page: z.number().optional().describe("Page number"),
+  limit: z.number().optional().describe("Number of items per page")
+});
+
+const dateRangeSchema = z.object({
+  startDate: z.string().describe("Start date (YYYY-MM-DD)"),
+  endDate: z.string().describe("End date (YYYY-MM-DD)")
+});
 
 export default function ({ config }: { config: z.infer<typeof configSchema> }) {
   const server = new McpServer({
@@ -68,14 +79,20 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
   // Campaigns Module
   server.tool(
     'listCampaigns',
-    'List all campaigns',
+    'List all campaigns with pagination',
     {
-      page: z.number().optional().describe("Page number"),
-      limit: z.number().optional().describe("Number of items per page")
+      ...paginationSchema.shape,
+      status: z.enum(['active', 'paused', 'completed', 'all']).optional().describe("Filter by status"),
+      search: z.string().optional().describe("Search term for campaigns")
     },
-    async ({ page, limit }) => {
+    async ({ page, limit, status, search }: { 
+      page?: number; 
+      limit?: number; 
+      status?: 'active' | 'paused' | 'completed' | 'all'; 
+      search?: string; 
+    }) => {
       const response = await client.get('/campaigns', {
-        params: { page, limit }
+        params: { page, limit, status, search }
       });
       return {
         content: [{ type: 'json', json: response.data }]
@@ -90,15 +107,48 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
       name: z.string().describe("Campaign name"),
       description: z.string().optional().describe("Campaign description"),
       settings: z.object({
-        // Add campaign settings schema here
+        schedule: z.object({
+          startDate: z.string().optional(),
+          endDate: z.string().optional(),
+          timezone: z.string().optional()
+        }).optional(),
+        emailSettings: z.object({
+          replyTo: z.string().email().optional(),
+          fromName: z.string().optional()
+        }).optional()
       }).optional()
     },
-    async ({ name, description, settings }) => {
-      const response = await client.post('/campaigns', {
-        name,
-        description,
-        settings
-      });
+    async (campaignData: {
+      name: string;
+      description?: string;
+      settings?: {
+        schedule?: {
+          startDate?: string;
+          endDate?: string;
+          timezone?: string;
+        };
+        emailSettings?: {
+          replyTo?: string;
+          fromName?: string;
+        };
+      };
+    }) => {
+      const response = await client.post('/campaigns', campaignData);
+      return {
+        content: [{ type: 'json', json: response.data }]
+      };
+    }
+  );
+
+  server.tool(
+    'updateCampaignStatus',
+    'Update campaign status (pause/resume)',
+    {
+      campaignId: z.string().describe("Campaign ID"),
+      status: z.enum(['active', 'paused']).describe("New campaign status")
+    },
+    async ({ campaignId, status }: { campaignId: string; status: 'active' | 'paused' }) => {
+      const response = await client.put(`/campaigns/${campaignId}/status`, { status });
       return {
         content: [{ type: 'json', json: response.data }]
       };
@@ -108,11 +158,8 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
   // Templates Module
   server.tool(
     'listTemplates',
-    'List all email templates',
-    {
-      page: z.number().optional().describe("Page number"),
-      limit: z.number().optional().describe("Number of items per page")
-    },
+    'List all email templates with pagination',
+    paginationSchema,
     async ({ page, limit }) => {
       const response = await client.get('/templates', {
         params: { page, limit }
@@ -130,14 +177,22 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
       name: z.string().describe("Template name"),
       subject: z.string().describe("Email subject"),
       body: z.string().describe("Email body"),
-      type: z.enum(['html', 'text']).describe("Template type")
+      type: z.enum(['html', 'text']).describe("Template type"),
+      variables: z.array(z.string()).optional().describe("Template variables")
     },
-    async ({ name, subject, body, type }) => {
+    async ({ name, subject, body, type, variables }: {
+      name: string;
+      subject: string;
+      body: string;
+      type: 'html' | 'text';
+      variables?: string[];
+    }) => {
       const response = await client.post('/templates', {
         name,
         subject,
         body,
-        type
+        type,
+        variables
       });
       return {
         content: [{ type: 'json', json: response.data }]
@@ -148,14 +203,20 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
   // Contacts Module
   server.tool(
     'listContacts',
-    'List all contacts',
+    'List all contacts with pagination',
     {
-      page: z.number().optional().describe("Page number"),
-      limit: z.number().optional().describe("Number of items per page")
+      ...paginationSchema.shape,
+      search: z.string().optional().describe("Search term for contacts"),
+      tags: z.array(z.string()).optional().describe("Filter by tags")
     },
-    async ({ page, limit }) => {
+    async ({ page, limit, search, tags }: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      tags?: string[];
+    }) => {
       const response = await client.get('/contacts', {
-        params: { page, limit }
+        params: { page, limit, search, tags }
       });
       return {
         content: [{ type: 'json', json: response.data }]
@@ -170,15 +231,137 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
       email: z.string().email().describe("Contact email"),
       firstName: z.string().optional().describe("First name"),
       lastName: z.string().optional().describe("Last name"),
+      company: z.string().optional().describe("Company name"),
+      title: z.string().optional().describe("Job title"),
+      phone: z.string().optional().describe("Phone number"),
+      tags: z.array(z.string()).optional().describe("Contact tags"),
       customFields: z.record(z.string()).optional().describe("Custom fields")
     },
-    async ({ email, firstName, lastName, customFields }) => {
-      const response = await client.post('/contacts', {
-        email,
-        firstName,
-        lastName,
-        customFields
+    async (contactData: {
+      email: string;
+      firstName?: string;
+      lastName?: string;
+      company?: string;
+      title?: string;
+      phone?: string;
+      tags?: string[];
+      customFields?: Record<string, string>;
+    }) => {
+      const response = await client.post('/contacts', contactData);
+      return {
+        content: [{ type: 'json', json: response.data }]
+      };
+    }
+  );
+
+  server.tool(
+    'updateContact',
+    'Update an existing contact',
+    {
+      contactId: z.string().describe("Contact ID"),
+      email: z.string().email().optional().describe("Contact email"),
+      firstName: z.string().optional().describe("First name"),
+      lastName: z.string().optional().describe("Last name"),
+      company: z.string().optional().describe("Company name"),
+      title: z.string().optional().describe("Job title"),
+      phone: z.string().optional().describe("Phone number"),
+      tags: z.array(z.string()).optional().describe("Contact tags"),
+      customFields: z.record(z.string()).optional().describe("Custom fields")
+    },
+    async ({ contactId, ...updateData }: {
+      contactId: string;
+      email?: string;
+      firstName?: string;
+      lastName?: string;
+      company?: string;
+      title?: string;
+      phone?: string;
+      tags?: string[];
+      customFields?: Record<string, string>;
+    }) => {
+      const response = await client.put(`/contacts/${contactId}`, updateData);
+      return {
+        content: [{ type: 'json', json: response.data }]
+      };
+    }
+  );
+
+  // Sequences Module
+  server.tool(
+    'listSequences',
+    'List all sequences with pagination',
+    {
+      ...paginationSchema.shape,
+      search: z.string().optional().describe("Search term for sequences"),
+      status: z.enum(['active', 'paused', 'all']).optional().describe("Filter by status")
+    },
+    async ({ page, limit, search, status }: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      status?: 'active' | 'paused' | 'all';
+    }) => {
+      const response = await client.get('/sequences', {
+        params: { page, limit, search, status }
       });
+      return {
+        content: [{ type: 'json', json: response.data }]
+      };
+    }
+  );
+
+  server.tool(
+    'createSequence',
+    'Create a new sequence',
+    {
+      name: z.string().describe("Sequence name"),
+      description: z.string().optional().describe("Sequence description"),
+      steps: z.array(z.object({
+        templateId: z.string().describe("Template ID"),
+        delay: z.number().describe("Delay in hours"),
+        conditions: z.object({
+          ifOpened: z.boolean().optional(),
+          ifReplied: z.boolean().optional(),
+          ifClicked: z.boolean().optional()
+        }).optional()
+      })).describe("Sequence steps"),
+      settings: z.object({
+        schedule: z.object({
+          startDate: z.string().optional(),
+          endDate: z.string().optional(),
+          timezone: z.string().optional()
+        }).optional(),
+        emailSettings: z.object({
+          replyTo: z.string().email().optional(),
+          fromName: z.string().optional()
+        }).optional()
+      }).optional()
+    },
+    async (sequenceData: {
+      name: string;
+      description?: string;
+      steps: Array<{
+        templateId: string;
+        delay: number;
+        conditions?: {
+          ifOpened?: boolean;
+          ifReplied?: boolean;
+          ifClicked?: boolean;
+        };
+      }>;
+      settings?: {
+        schedule?: {
+          startDate?: string;
+          endDate?: string;
+          timezone?: string;
+        };
+        emailSettings?: {
+          replyTo?: string;
+          fromName?: string;
+        };
+      };
+    }) => {
+      const response = await client.post('/sequences', sequenceData);
       return {
         content: [{ type: 'json', json: response.data }]
       };
@@ -187,34 +370,21 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
 
   // Analytics Module
   server.tool(
-    'getCampaignAnalytics',
-    'Get analytics for a specific campaign',
-    {
-      campaignId: z.string().describe("Campaign ID"),
-      startDate: z.string().optional().describe("Start date (YYYY-MM-DD)"),
-      endDate: z.string().optional().describe("End date (YYYY-MM-DD)")
-    },
-    async ({ campaignId, startDate, endDate }) => {
-      const response = await client.get(`/analytics/campaigns/${campaignId}`, {
-        params: { startDate, endDate }
-      });
-      return {
-        content: [{ type: 'json', json: response.data }]
-      };
-    }
-  );
-
-  server.tool(
     'getConsolidatedStats',
-    'Get comprehensive report of engagement statistics across selected sequences',
+    'Get comprehensive engagement statistics across sequences',
     {
       sequenceIds: z.array(z.string()).describe("Array of sequence IDs"),
-      startDate: z.string().describe("Start date (YYYY-MM-DD)"),
-      endDate: z.string().describe("End date (YYYY-MM-DD)"),
+      ...dateRangeSchema.shape,
       pageNum: z.number().optional().describe("Page number"),
       pageLimit: z.number().optional().describe("Number of items per page")
     },
-    async ({ sequenceIds, startDate, endDate, pageNum, pageLimit }) => {
+    async ({ sequenceIds, startDate, endDate, pageNum, pageLimit }: {
+      sequenceIds: string[];
+      startDate: string;
+      endDate: string;
+      pageNum?: number;
+      pageLimit?: number;
+    }) => {
       const response = await client.post('/analytics/consolidated-stats', {
         sequenceIds,
         startDate,
@@ -232,11 +402,18 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
     'getSequenceStats',
     'Get high-level statistics for a specific sequence',
     {
-      sequenceId: z.string().describe("Sequence ID")
+      sequenceId: z.string().describe("Sequence ID"),
+      ...dateRangeSchema.shape
     },
-    async ({ sequenceId }) => {
+    async ({ sequenceId, startDate, endDate }: {
+      sequenceId: string;
+      startDate: string;
+      endDate: string;
+    }) => {
       const response = await client.post('/analytics/stats', {
-        sequenceId
+        sequenceId,
+        startDate,
+        endDate
       });
       return {
         content: [{ type: 'json', json: response.data }]
@@ -244,16 +421,13 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
     }
   );
 
-  // Sequences Module
+  // Webhooks Module
   server.tool(
-    'listSequences',
-    'List all sequences',
-    {
-      page: z.number().optional().describe("Page number"),
-      limit: z.number().optional().describe("Number of items per page")
-    },
+    'listWebhooks',
+    'List all registered webhooks',
+    paginationSchema,
     async ({ page, limit }) => {
-      const response = await client.get('/sequences', {
+      const response = await client.get('/webhooks', {
         params: { page, limit }
       });
       return {
@@ -263,21 +437,31 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
   );
 
   server.tool(
-    'createSequence',
-    'Create a new sequence',
+    'createWebhook',
+    'Create a new webhook',
     {
-      name: z.string().describe("Sequence name"),
-      description: z.string().optional().describe("Sequence description"),
-      steps: z.array(z.object({
-        templateId: z.string().describe("Template ID"),
-        delay: z.number().describe("Delay in hours")
-      })).describe("Sequence steps")
+      url: z.string().url().describe("Webhook URL"),
+      events: z.array(z.enum([
+        'email.opened',
+        'email.clicked',
+        'email.replied',
+        'email.bounced',
+        'sequence.started',
+        'sequence.completed',
+        'contact.created',
+        'contact.updated'
+      ])).describe("Events to subscribe to"),
+      secret: z.string().optional().describe("Webhook secret for signature verification")
     },
-    async ({ name, description, steps }) => {
-      const response = await client.post('/sequences', {
-        name,
-        description,
-        steps
+    async ({ url, events, secret }: {
+      url: string;
+      events: Array<'email.opened' | 'email.clicked' | 'email.replied' | 'email.bounced' | 'sequence.started' | 'sequence.completed' | 'contact.created' | 'contact.updated'>;
+      secret?: string;
+    }) => {
+      const response = await client.post('/webhooks', {
+        url,
+        events,
+        secret
       });
       return {
         content: [{ type: 'json', json: response.data }]
@@ -285,8 +469,22 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
     }
   );
 
+  server.tool(
+    'deleteWebhook',
+    'Delete a webhook',
+    {
+      webhookId: z.string().describe("Webhook ID")
+    },
+    async ({ webhookId }: { webhookId: string }) => {
+      await client.delete(`/webhooks/${webhookId}`);
+      return {
+        content: [{ type: 'text', text: 'Webhook deleted successfully' }]
+      };
+    }
+  );
+
   // Error handling middleware
-  server.onError((error) => {
+  server.onError((error: any) => {
     console.error('MCP Server Error:', error);
     return {
       content: [{ 
