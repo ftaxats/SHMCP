@@ -26,6 +26,7 @@ function createClient(config: z.infer<typeof configSchema>) {
 async function validateApiKey(client: ReturnType<typeof createClient>) {
   try {
     await client.get('/user/profile');
+    return true;
   } catch (error: any) {
     if (error.response?.status === 401) {
       throw new Error('Invalid API key');
@@ -59,19 +60,40 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
     description: 'MCP server for SalesHandy API integration'
   });
 
-  const client = createClient(config);
+  // Add a tool to validate API key
+  server.tool(
+    'validateApiKey',
+    'Validate your SalesHandy API key',
+    {
+      apiKey: z.string().describe("Your SalesHandy API key")
+    },
+    async (args) => {
+      try {
+        const client = createClient({ ...config, apiKey: args.apiKey });
+        await validateApiKey(client);
+        return formatResponse({ success: true, message: 'API key is valid' });
+      } catch (error: any) {
+        return formatResponse({ 
+          success: false, 
+          message: error.message || 'Failed to validate API key' 
+        });
+      }
+    }
+  );
 
-  // Add tools
+  // Add a tool to get user profile
   server.tool(
     'getUserProfile',
     'Get current user profile information',
     {},
     async () => {
+      const client = createClient(config);
       const response = await client.get('/user/profile');
       return formatResponse(response.data);
     }
   );
 
+  // Add a tool to list campaigns
   server.tool(
     'listCampaigns',
     'List all campaigns with optional filtering',
@@ -82,11 +104,13 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
       search: z.string().optional().describe("Search term")
     },
     async (args) => {
+      const client = createClient(config);
       const response = await client.get('/campaigns', { params: args });
       return formatResponse(response.data);
     }
   );
 
+  // Add a tool to create campaign
   server.tool(
     'createCampaign',
     'Create a new campaign',
@@ -98,11 +122,13 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
       contacts: z.array(z.string()).describe("List of contact IDs")
     },
     async (args) => {
+      const client = createClient(config);
       const response = await client.post('/campaigns', args);
       return formatResponse(response.data);
     }
   );
 
+  // Add a tool to update campaign status
   server.tool(
     'updateCampaignStatus',
     'Update campaign status',
@@ -111,11 +137,13 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
       status: z.enum(['draft', 'scheduled', 'running', 'paused', 'completed']).describe("New status")
     },
     async (args) => {
+      const client = createClient(config);
       const response = await client.put(`/campaigns/${args.campaignId}/status`, { status: args.status });
       return formatResponse(response.data);
     }
   );
 
+  // Add a tool to list templates
   server.tool(
     'listTemplates',
     'List all email templates',
@@ -124,11 +152,13 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
       limit: z.number().optional().describe("Number of items per page")
     },
     async (args) => {
+      const client = createClient(config);
       const response = await client.get('/templates', { params: args });
       return formatResponse(response.data);
     }
   );
 
+  // Add a tool to create template
   server.tool(
     'createTemplate',
     'Create a new email template',
@@ -138,11 +168,13 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
       body: z.string().describe("Email body in HTML format")
     },
     async (args) => {
+      const client = createClient(config);
       const response = await client.post('/templates', args);
       return formatResponse(response.data);
     }
   );
 
+  // Add a tool to list contacts
   server.tool(
     'listContacts',
     'List all contacts',
@@ -152,11 +184,13 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
       search: z.string().optional().describe("Search term")
     },
     async (args) => {
+      const client = createClient(config);
       const response = await client.get('/contacts', { params: args });
       return formatResponse(response.data);
     }
   );
 
+  // Add a tool to create contact
   server.tool(
     'createContact',
     'Create a new contact',
@@ -168,11 +202,13 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
       tags: z.array(z.string()).optional().describe("Contact tags")
     },
     async (args) => {
+      const client = createClient(config);
       const response = await client.post('/contacts', args);
       return formatResponse(response.data);
     }
   );
 
+  // Add a tool to update contact
   server.tool(
     'updateContact',
     'Update an existing contact',
@@ -185,6 +221,7 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
       tags: z.array(z.string()).optional().describe("Contact tags")
     },
     async (args) => {
+      const client = createClient(config);
       const { contactId, ...updateData } = args;
       const response = await client.put(`/contacts/${contactId}`, updateData);
       return formatResponse(response.data);
