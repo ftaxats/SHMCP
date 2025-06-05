@@ -10,29 +10,14 @@ export const configSchema = z.object({
 
 // Helper function to create axios client
 function createClient(config: z.infer<typeof configSchema>) {
-  if (!config.apiKey) {
-    throw new Error('API key is required');
-  }
   return axios.create({
     baseURL: config.baseUrl,
     headers: {
       'Authorization': `Bearer ${config.apiKey}`,
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
     }
   });
-}
-
-// Helper function to validate API key
-async function validateApiKey(client: ReturnType<typeof createClient>) {
-  try {
-    await client.get('/user/profile');
-    return true;
-  } catch (error: any) {
-    if (error.response?.status === 401) {
-      throw new Error('Invalid API key');
-    }
-    throw error;
-  }
 }
 
 // Helper function to format response
@@ -59,27 +44,6 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
     version: '1.0.0',
     description: 'MCP server for SalesHandy API integration'
   });
-
-  // Add a tool to validate API key
-  server.tool(
-    'validateApiKey',
-    'Validate your SalesHandy API key',
-    {
-      apiKey: z.string().describe("Your SalesHandy API key")
-    },
-    async (args) => {
-      try {
-        const client = createClient({ ...config, apiKey: args.apiKey });
-        await validateApiKey(client);
-        return formatResponse({ success: true, message: 'API key is valid' });
-      } catch (error: any) {
-        return formatResponse({ 
-          success: false, 
-          message: error.message || 'Failed to validate API key' 
-        });
-      }
-    }
-  );
 
   // Add a tool to get user profile
   server.tool(
