@@ -1,0 +1,5 @@
+version: 1
+runtime: typescript
+start:
+  command: ["npm", "start"]
+  port: 8000
