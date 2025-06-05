@@ -1,4 +1,4 @@
-FROM node:18-slim
+FROM node:18-alpine
 
 WORKDIR /app
 
@@ -8,15 +8,14 @@ COPY package*.json ./
 # Install dependencies
 RUN npm install
 
-# Copy source code and config files
-COPY tsconfig.json ./
-COPY src/ ./src/
+# Copy application code
+COPY . .
 
-# Build TypeScript code
+# Build the application
 RUN npm run build
 
 # Expose the port
 EXPOSE 8000
 
 # Start the server
-CMD ["npm", "start"] 
+CMD ["node", "dist/index.js"] 
