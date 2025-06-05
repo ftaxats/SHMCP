@@ -9,11 +9,17 @@ config:
     required: true
     secret: true
     placeholder: "Enter your SalesHandy API key here"
+    example: "sh_1234567890abcdef"  # Example format
   baseUrl:
     type: string
     description: "Base URL for SalesHandy API (optional)"
     default: "https://api.saleshandy.com/api/v1"
     required: false
+
+# Example configuration for testing:
+# config:
+#   apiKey: "your-api-key-here"
+#   baseUrl: "https://api.saleshandy.com/api/v1"
 
 build:
   dockerfile: Dockerfile
@@ -21,5 +27,5 @@ build:
 
 runtime: typescript
 start:
-  command: ["npm", "start"]
+  command: ["node", "dist/index.js"]
   port: 8000
