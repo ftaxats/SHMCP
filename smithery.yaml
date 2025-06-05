@@ -1,4 +1,22 @@
 version: 1
+name: saleshandy-mcp
+description: MCP server for SalesHandy API integration
+
+config:
+  apiKey:
+    type: string
+    description: "SalesHandy API key for authentication"
+    required: true
+    secret: true
+  baseUrl:
+    type: string
+    description: "Base URL for SalesHandy API"
+    default: "https://api.saleshandy.com/api/v1"
+
+build:
+  dockerfile: Dockerfile
+  context: .
+
 runtime: typescript
 start:
   command: ["npm", "start"]

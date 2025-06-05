@@ -11,7 +11,7 @@ RUN npm install
 # Copy source code
 COPY . .
 
-# Build TypeScript
+# Build TypeScript code
 RUN npm run build
 
 # Expose the port
