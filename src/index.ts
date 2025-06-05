@@ -3,10 +3,13 @@ import { z } from 'zod';
 import axios from 'axios';
 
 // Configuration schema
-export const configSchema = z.object({
+const configSchema = z.object({
   apiKey: z.string().optional().describe("SalesHandy API key for authentication"),
   baseUrl: z.string().default("https://api.saleshandy.com/api/v1").describe("Base URL for SalesHandy API")
 });
+
+// Export the schema for MCP
+export { configSchema };
 
 // Helper function to create axios client
 function createClient(config: z.infer<typeof configSchema>) {
