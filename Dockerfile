@@ -8,8 +8,9 @@ COPY package*.json ./
 # Install dependencies
 RUN npm install
 
-# Copy source code
-COPY . .
+# Copy source code and config files
+COPY tsconfig.json ./
+COPY src/ ./src/
 
 # Build TypeScript code
 RUN npm run build
