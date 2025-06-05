@@ -5,13 +5,15 @@ description: MCP server for SalesHandy API integration
 config:
   apiKey:
     type: string
-    description: "SalesHandy API key for authentication"
+    description: "Your SalesHandy API key - Required for authentication. Get it from your SalesHandy account settings."
     required: true
     secret: true
+    placeholder: "Enter your SalesHandy API key here"
   baseUrl:
     type: string
-    description: "Base URL for SalesHandy API"
+    description: "Base URL for SalesHandy API (optional)"
     default: "https://api.saleshandy.com/api/v1"
+    required: false
 
 build:
   dockerfile: Dockerfile
