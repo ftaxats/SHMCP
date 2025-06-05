@@ -4,12 +4,15 @@ import axios from 'axios';
 
 // Configuration schema
 export const configSchema = z.object({
-  apiKey: z.string().describe("SalesHandy API key for authentication"),
+  apiKey: z.string().optional().describe("SalesHandy API key for authentication"),
   baseUrl: z.string().default("https://api.saleshandy.com/api/v1").describe("Base URL for SalesHandy API")
 });
 
 // Helper function to create axios client
 function createClient(config: z.infer<typeof configSchema>) {
+  if (!config.apiKey) {
+    throw new Error('API key is required for this operation');
+  }
   return axios.create({
     baseURL: config.baseUrl,
     headers: {
