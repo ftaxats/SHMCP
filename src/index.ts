@@ -20,6 +20,14 @@ export default async function createServer(config: Config) {
       config: {
         baseUrl: config.baseUrl,
         apiKey: config.apiKey
+      },
+      // Add CORS and other HTTP options
+      http: {
+        cors: {
+          origin: "*",
+          methods: ["GET", "POST", "OPTIONS"],
+          allowedHeaders: ["Content-Type", "Authorization"]
+        }
       }
     });
 
