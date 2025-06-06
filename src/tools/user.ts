@@ -6,12 +6,17 @@ export const getUserProfile = (client: AxiosInstance) => ({
   description: "Get current user profile information",
   parameters: z.object({}),
   handler: async () => {
-    const response = await client.get("/user/profile");
-    return {
-      content: [{
-        type: "text",
-        text: JSON.stringify(response.data, null, 2)
-      }]
-    };
+    try {
+      const response = await client.get("/user/profile");
+      return {
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify(response.data, null, 2)
+        }]
+      };
+    } catch (error) {
+      console.error("Failed to get user profile:", error);
+      throw error;
+    }
   }
 }); 
