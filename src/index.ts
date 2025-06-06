@@ -8,12 +8,16 @@ export const config = configSchema;
 
 export default async function createServer(config: Config) {
   try {
+    console.log("Starting server initialization...");
+    console.log("Config:", { ...config, apiKey: config.apiKey ? "***" : undefined });
+
     // Validate config
     if (!config.apiKey) {
       throw new Error("API key is required for SalesHandy API operations");
     }
 
     // Initialize server with basic configuration
+    console.log("Creating MCP server instance...");
     const server = new McpServer({
       name: "SalesHandy MCP",
       version: "1.0.0",
@@ -24,6 +28,7 @@ export default async function createServer(config: Config) {
     });
 
     // Register tools with lazy initialization
+    console.log("Registering tools...");
     const tools = [
       {
         name: "getUserProfile",
@@ -142,33 +147,43 @@ export default async function createServer(config: Config) {
     ];
 
     // Register each tool
+    console.log("Registering individual tools...");
     for (const tool of tools) {
-      server.tool(
-        tool.name,
-        tool.description,
-        tool.annotations,
-        async (args: any, extra) => {
-          const client = createClient(config);
-          try {
-            await validateApiKey(client);
-            const allTools = createTools(client);
-            const toolImpl = allTools.find(t => t.name === tool.name);
-            if (!toolImpl) {
-              throw new Error(`Tool ${tool.name} not found`);
+      try {
+        console.log(`Registering tool: ${tool.name}`);
+        server.tool(
+          tool.name,
+          tool.description,
+          tool.annotations,
+          async (args: any, extra) => {
+            console.log(`Executing tool: ${tool.name}`, { args });
+            const client = createClient(config);
+            try {
+              await validateApiKey(client);
+              const allTools = createTools(client);
+              const toolImpl = allTools.find(t => t.name === tool.name);
+              if (!toolImpl) {
+                throw new Error(`Tool ${tool.name} not found`);
+              }
+              const result = await toolImpl.handler(args);
+              console.log(`Tool ${tool.name} execution successful`);
+              return {
+                content: [{
+                  type: "text" as const,
+                  text: typeof result === 'string' ? result : JSON.stringify(result)
+                }]
+              };
+            } catch (error) {
+              console.error(`Failed to execute tool ${tool.name}:`, error);
+              throw error;
             }
-            const result = await toolImpl.handler(args);
-            return {
-              content: [{
-                type: "text" as const,
-                text: typeof result === 'string' ? result : JSON.stringify(result)
-              }]
-            };
-          } catch (error) {
-            console.error(`Failed to execute tool ${tool.name}:`, error);
-            throw error;
           }
-        }
-      );
+        );
+        console.log(`Successfully registered tool: ${tool.name}`);
+      } catch (error) {
+        console.error(`Failed to register tool ${tool.name}:`, error);
+        throw error;
+      }
     }
 
     // Log server initialization
