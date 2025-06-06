@@ -33,8 +33,10 @@ export const listCampaigns = (client: AxiosInstance) => ({
   handler: async (args: ListCampaignsParams) => {
     const response = await client.get("/campaigns", { params: args });
     return {
-      type: "text" as const,
-      content: JSON.stringify(response.data, null, 2)
+      content: [{
+        type: "text",
+        text: JSON.stringify(response.data, null, 2)
+      }]
     };
   }
 });
@@ -46,8 +48,10 @@ export const createCampaign = (client: AxiosInstance) => ({
   handler: async (args: CreateCampaignParams) => {
     const response = await client.post("/campaigns", args);
     return {
-      type: "text" as const,
-      content: JSON.stringify(response.data, null, 2)
+      content: [{
+        type: "text",
+        text: JSON.stringify(response.data, null, 2)
+      }]
     };
   }
 });
@@ -59,8 +63,10 @@ export const updateCampaignStatus = (client: AxiosInstance) => ({
   handler: async (args: UpdateCampaignStatusParams) => {
     const response = await client.patch(`/campaigns/${args.campaignId}/status`, { status: args.status });
     return {
-      type: "text" as const,
-      content: JSON.stringify(response.data, null, 2)
+      content: [{
+        type: "text",
+        text: JSON.stringify(response.data, null, 2)
+      }]
     };
   }
 }); 

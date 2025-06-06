@@ -34,8 +34,10 @@ export const listContacts = (client: AxiosInstance) => ({
   handler: async (args: ListContactsParams) => {
     const response = await client.get("/contacts", { params: args });
     return {
-      type: "text" as const,
-      content: JSON.stringify(response.data, null, 2)
+      content: [{
+        type: "text",
+        text: JSON.stringify(response.data, null, 2)
+      }]
     };
   }
 });
@@ -47,8 +49,10 @@ export const createContact = (client: AxiosInstance) => ({
   handler: async (args: CreateContactParams) => {
     const response = await client.post("/contacts", args);
     return {
-      type: "text" as const,
-      content: JSON.stringify(response.data, null, 2)
+      content: [{
+        type: "text",
+        text: JSON.stringify(response.data, null, 2)
+      }]
     };
   }
 });
@@ -61,8 +65,10 @@ export const updateContact = (client: AxiosInstance) => ({
     const { contactId, ...contactData } = args;
     const response = await client.put(`/contacts/${contactId}`, contactData);
     return {
-      type: "text" as const,
-      content: JSON.stringify(response.data, null, 2)
+      content: [{
+        type: "text",
+        text: JSON.stringify(response.data, null, 2)
+      }]
     };
   }
 }); 

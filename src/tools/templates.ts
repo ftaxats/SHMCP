@@ -21,8 +21,10 @@ export const listTemplates = (client: AxiosInstance) => ({
   handler: async (args: ListTemplatesParams) => {
     const response = await client.get("/templates", { params: args });
     return {
-      type: "text" as const,
-      content: JSON.stringify(response.data, null, 2)
+      content: [{
+        type: "text",
+        text: JSON.stringify(response.data, null, 2)
+      }]
     };
   }
 });
@@ -34,8 +36,10 @@ export const createTemplate = (client: AxiosInstance) => ({
   handler: async (args: CreateTemplateParams) => {
     const response = await client.post("/templates", args);
     return {
-      type: "text" as const,
-      content: JSON.stringify(response.data, null, 2)
+      content: [{
+        type: "text",
+        text: JSON.stringify(response.data, null, 2)
+      }]
     };
   }
 }); 

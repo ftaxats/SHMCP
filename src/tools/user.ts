@@ -8,8 +8,10 @@ export const getUserProfile = (client: AxiosInstance) => ({
   handler: async () => {
     const response = await client.get("/user/profile");
     return {
-      type: "text" as const,
-      content: JSON.stringify(response.data, null, 2)
+      content: [{
+        type: "text",
+        text: JSON.stringify(response.data, null, 2)
+      }]
     };
   }
 }); 
