@@ -26,7 +26,7 @@ config:
     default:
       baseUrl: "https://api.saleshandy.com/api/v1"
 
-# Example configuration for testing:
+# Example configuration for 
 # config:
 #   apiKey: "your-api-key-here"
 #   baseUrl: "https://api.saleshandy.com/api/v1"
