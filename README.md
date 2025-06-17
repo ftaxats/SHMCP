@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/ftaxats-shmcp-badge.png)](https://mseep.ai/app/ftaxats-shmcp)
+
 # SalesHandy MCP Server
 
 A Model Context Protocol (MCP) server for SalesHandy API integration. This server provides tools for managing campaigns, templates, contacts, and more through the SalesHandy API.
